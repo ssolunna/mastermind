@@ -17,6 +17,10 @@ module CodePeg
       gets.chomp.split(' ')
     end
   end
+
+  def self.valid?(codepegs)
+    codepegs.all? { |codepeg| CODEPEGS.include?(codepeg) }
+  end
 end
 
 class CodeMaker
