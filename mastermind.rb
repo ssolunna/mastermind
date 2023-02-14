@@ -3,7 +3,7 @@
 # Game: Mastermind
 
 class Game
-  attr_accessor :codemaker
+  attr_accessor :codemaker, :codebreaker
 
   def initialize(row, spaces)
     @row = row
@@ -25,6 +25,10 @@ class Game
     print 'Guess: '
     @codebreaker.guess = @codebreaker.get_codepegs(@spaces)
   end
+
+  def valid?(codepegs)
+    CodePeg.valid_color?(codepegs) && codepegs.length == @spaces
+  end
 end
 
 module CodePeg
@@ -43,7 +47,7 @@ module CodePeg
     end
   end
 
-  def self.valid?(codepegs)
+  def self.valid_color?(codepegs)
     codepegs.all? { |codepeg| CODEPEGS.include?(codepeg) }
   end
 end
