@@ -7,7 +7,8 @@ module CodePeg
 
   def self.info
     puts "Code pegs: #{CODEPEGS.join(' ')}"
-    puts 'Syntax: space-separated words (e.g. color color color color)'
+    puts 'Syntax: space-separated words'
+    puts '        (e.g. color color color color)'
     puts
   end
 
@@ -36,6 +37,19 @@ class Game
     @spaces = spaces
     @codemaker = nil
     @codebreaker = nil
+  end
+
+  def rules
+    puts 'Rules: Duplicated colors are ALLOWED.'
+    puts '       Blank spaces are NOT ALLOWED.'
+    puts '       You must fill each space with one color (code peg).'
+    puts
+  end
+
+  def info
+    puts "Number of rows (turns): #{@rows}"
+    puts "Number of spaces per row: #{@spaces}"
+    puts
   end
 
   def get_players
@@ -98,11 +112,16 @@ class CodeBreaker
   end
 end
 
-# Display documentation
-CodePeg.info
-
 # Start game with number of (rows, spaces)
 game = Game.new(12, 4)
+
+# Display documentation
+puts 'GAME: MASTERMIND'
+puts
+game.rules
+CodePeg.info
+game.info
+
 game.get_players
 game.make_pattern
 
