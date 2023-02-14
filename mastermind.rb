@@ -2,6 +2,31 @@
 
 # Game: Mastermind
 
+class Game
+  attr_accessor :codemaker
+
+  def initialize(row, spaces)
+    @row = row
+    @spaces = spaces
+    @codemaker = nil
+    @codebreaker = nil
+  end
+
+  def get_players
+    @codemaker = CodeMaker.new('Computer')
+    @codebreaker = CodeBreaker.new('Player')
+  end
+
+  def make_pattern
+    @codemaker.pattern = @codemaker.get_codepegs(@spaces, 'random')
+  end
+
+  def get_guess
+    print 'Guess: '
+    @codebreaker.guess = @codebreaker.get_codepegs(@spaces)
+  end
+end
+
 module CodePeg
   CODEPEGS = %w[yellow green red blue purple pink].freeze
 
@@ -47,11 +72,9 @@ class CodeBreaker
   end
 end
 
-codemaker = CodeMaker.new('Computer')
-codemaker.pattern = codemaker.get_codepegs(4, 'random')
-
-codebreaker = CodeBreaker.new('Player')
+game = Game.new(12, 4)
+game.get_players
+game.make_pattern
 CodePeg.info
 puts
-print 'Guess: '
-codebreaker.guess = codebreaker.get_codepegs(4)
+game.get_guess
