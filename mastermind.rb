@@ -4,9 +4,10 @@
 
 class Game
   attr_accessor :codemaker, :codebreaker
+  attr_reader :rows
 
-  def initialize(row, spaces)
-    @row = row
+  def initialize(rows, spaces)
+    @rows = rows
     @spaces = spaces
     @codemaker = nil
     @codebreaker = nil
@@ -21,7 +22,7 @@ class Game
     @codemaker.pattern = @codemaker.get_codepegs(@spaces, 'random')
   end
 
-  def get_guess
+  def make_guess
     print 'Guess: '
     @codebreaker.guess = @codebreaker.get_codepegs(@spaces)
   end
@@ -76,9 +77,17 @@ class CodeBreaker
   end
 end
 
+# Display documentation
+CodePeg.info
+puts
+
+# Start game with number of (rows, spaces)
 game = Game.new(12, 4)
 game.get_players
 game.make_pattern
-CodePeg.info
-puts
-game.get_guess
+
+game.rows.times do |number|
+  row = number + 1
+  print "[Row #{row}] "
+  game.make_guess
+end
