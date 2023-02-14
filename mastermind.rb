@@ -14,7 +14,9 @@ module CodePeg
 
   def get_codepegs(quantity, random = nil)
     if random
-      CODEPEGS.sample(quantity)
+      selected_codepegs = []
+      quantity.times { selected_codepegs << CODEPEGS.sample }
+      selected_codepegs
     else
       gets.chomp.split(' ')
     end
