@@ -27,30 +27,50 @@ module CodePeg
   end
 end
 
+module KeyPeg
+  def self.count(pattern, guess)
+    pattern = pattern.rotate(0) # Makes a copy of pattern array
+    guess = guess.rotate(0) # Makes a copy of guess array
+    colored = 0 # Code peg is correct in both color and position
+    white = 0 # Correct color code peg, but in the wrong position
+
+    pattern.each_with_index do |codepeg, slot|
+      if codepeg == guess[slot]
+        colored += 1
+      elsif guess.include?(codepeg)
+        white += 1
+        guess.fill('x', guess.index(codepeg), 1)
+      end
+    end
+
+    {colored: colored, white: white}
+  end
+end
+
 class Game
   include CodePeg
 
   attr_accessor :codemaker, :codebreaker
 
-  attr_reader :rows, :spaces
+  attr_reader :rows, :slots
 
-  def initialize(rows, spaces)
+  def initialize(rows, slots)
     @rows = rows
-    @spaces = spaces
+    @slots = slots
     @codemaker = nil
     @codebreaker = nil
   end
 
   def rules
     puts 'Rules: Duplicated colors are ALLOWED.'
-    puts '       Blank spaces are NOT ALLOWED.'
-    puts '       You must fill each space with one color (code peg).'
+    puts '       Blank slots are NOT ALLOWED.'
+    puts '       You must fill each slot with one color (code peg).'
     puts
   end
 
   def info
     puts "Number of rows (turns): #{@rows}"
-    puts "Number of spaces per row: #{@spaces}"
+    puts "Number of slots per row: #{@slots}"
     puts
   end
 
@@ -60,23 +80,23 @@ class Game
   end
 
   def make_pattern
-    @codemaker.pattern = @codemaker.get_codepegs(@spaces, 'random')
+    @codemaker.pattern = @codemaker.get_codepegs(@slots, 'random')
   end
 
   def make_guess
     print 'Guess: '
-    @codebreaker.guess = @codebreaker.get_codepegs(@spaces)
+    @codebreaker.guess = @codebreaker.get_codepegs(@slots)
   end
 
   def valid_guess?
     CodePeg.valid_color?(@codebreaker.guess) &&
-      @codebreaker.guess.length == @spaces
+      @codebreaker.guess.length == @slots
   end
 
   def invalid_guess
     puts
     puts "Couldn't get your guess."
-    puts "You must type #{@spaces} colors from the code pegs (space-separated)."
+    puts "You must type #{@slots} colors from the code pegs (space-separated)."
   end
 
   def codebreaker_won?
@@ -114,7 +134,7 @@ class CodeBreaker
   end
 end
 
-# Start game with number of (rows, spaces)
+# Start game with number of (rows, slots)
 game = Game.new(12, 4)
 
 # Display documentation
@@ -135,6 +155,8 @@ game.rows.times do |number|
   game.make_guess
 
   if game.valid_guess?
+    game.codemaker.pattern
+    KeyPeg.count(game.codemaker.pattern, game.codebreaker.guess)
     if game.codebreaker_won? || row == last_row
       game.winner # Display game winner
       break
