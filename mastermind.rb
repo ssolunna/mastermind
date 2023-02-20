@@ -7,7 +7,7 @@ module CodePeg
 
   def self.info
     puts "Code pegs: #{CODEPEGS.join(' ')}"
-    puts 'Syntax: space-separated words'
+    puts 'Syntax: lowercase and space-separated words'
     puts '        (e.g. color color color color)'
     puts
   end
@@ -28,11 +28,18 @@ module CodePeg
 end
 
 module KeyPeg
+  def self.info
+    puts 'Key pegs: colored, white'
+    puts 'Colored pegs = Code peg is correct in both color and position'
+    puts 'White pegs = Code peg is correct in color but in the wrong position'
+    puts
+  end
+
   def self.count(pattern, guess)
     pattern = pattern.rotate(0) # Makes a copy of pattern array
     guess = guess.rotate(0) # Makes a copy of guess array
-    colored = 0 # Code peg is correct in both color and position
-    white = 0 # Correct color code peg, but in the wrong position
+    colored = 0
+    white = 0
 
     pattern.each_with_index do |codepeg, slot|
       if codepeg == guess[slot]
@@ -169,6 +176,7 @@ puts 'GAME: MASTERMIND'
 puts
 game.rules
 CodePeg.info
+KeyPeg.info
 game.info
 
 game.get_players
