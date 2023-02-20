@@ -43,7 +43,34 @@ module KeyPeg
       end
     end
 
-    {colored: colored, white: white}
+    { colored: colored, white: white }
+  end
+
+  def self.feedback(pattern, guess)
+    result = count(pattern, guess)
+
+    short_feedback(result)
+
+    if result.all? { |_keypeg, quantity| quantity.zero? }
+      puts 'No color found in pattern.'
+    else
+      print 'You got: '
+      i = 0
+      result.each do |keypeg, quantity|
+        if quantity.positive?
+          print ', ' if i >= 1
+          i += 1
+          print "#{quantity} #{keypeg} peg#{'s' if quantity > 1}"
+        end
+      end
+      puts '.'
+    end
+  end
+
+  def self.short_feedback(result)
+    print "["
+    result.each { |keypeg, quantity| print quantity, keypeg[0].upcase }
+    print '] '
   end
 end
 
@@ -151,12 +178,12 @@ game.make_pattern
 game.rows.times do |number|
   row = number + 1
   last_row = game.rows
+  puts
   print "[Row #{row}] "
   game.make_guess
 
   if game.valid_guess?
-    game.codemaker.pattern
-    KeyPeg.count(game.codemaker.pattern, game.codebreaker.guess)
+    KeyPeg.feedback(game.codemaker.pattern, game.codebreaker.guess)
     if game.codebreaker_won? || row == last_row
       game.winner # Display game winner
       break
