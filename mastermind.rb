@@ -64,18 +64,18 @@ module KeyPeg
       print 'You got: '
       i = 0
       result.each do |keypeg, quantity|
-        if quantity.positive?
-          print ', ' if i >= 1
-          i += 1
-          print "#{quantity} #{keypeg} peg#{'s' if quantity > 1}"
-        end
+        next unless quantity.positive?
+
+        print ', ' if i >= 1
+        i += 1
+        print "#{quantity} #{keypeg} peg#{'s' if quantity > 1}"
       end
       puts '.'
     end
   end
 
   def self.short_feedback(result)
-    print "["
+    print '['
     result.each { |keypeg, quantity| print quantity, keypeg[0].upcase }
     print '] '
   end
@@ -83,6 +83,7 @@ end
 
 class Game
   include CodePeg
+  include KeyPeg
 
   attr_accessor :codemaker, :codebreaker
 
@@ -93,19 +94,49 @@ class Game
     @slots = slots
     @codemaker = nil
     @codebreaker = nil
+    print_info
   end
 
-  def rules
+  def print_rules
     puts 'Rules: Duplicated colors are ALLOWED.'
     puts '       Blank slots are NOT ALLOWED.'
     puts '       You must fill each slot with one color (code peg).'
     puts
   end
 
-  def info
+  def print_info
+    puts 'GAME: MASTERMIND'
+    puts
+    print_rules
+    CodePeg.info
+    KeyPeg.info
     puts "Number of rows (turns): #{@rows}"
     puts "Number of slots per row: #{@slots}"
     puts
+  end
+
+  def play
+    get_players
+    make_pattern
+
+    @rows.times do |num|
+      current_row = num + 1
+      puts
+      print "[Row #{current_row}] Guess: "
+      make_guess
+
+      if valid_guess?
+        KeyPeg.feedback(@codemaker.pattern, @codebreaker.guess)
+        if codebreaker_won? || current_row == @rows
+          puts
+          puts winner
+          break
+        end
+      else
+        print_invalid_guess
+        break
+      end
+    end
   end
 
   def get_players
@@ -118,7 +149,6 @@ class Game
   end
 
   def make_guess
-    print 'Guess: '
     @codebreaker.guess = @codebreaker.get_codepegs(@slots)
   end
 
@@ -127,10 +157,11 @@ class Game
       @codebreaker.guess.length == @slots
   end
 
-  def invalid_guess
+  def print_invalid_guess
     puts
     puts "Couldn't get your guess."
-    puts "You must type #{@slots} colors from the code pegs (space-separated)."
+    puts "You must type #{@slots} colors from the code pegs."
+    puts '(lowercase and space-separated words)'
   end
 
   def codebreaker_won?
@@ -138,9 +169,11 @@ class Game
   end
 
   def winner
-    puts
-    puts @codebreaker.winner ? 'You won! You got it right.' :
+    if @codebreaker.winner
+      'You won! You got it right'
+    else
       "Game over. The pattern was: #{@codemaker.pattern.join(' ')}"
+    end
   end
 end
 
@@ -168,36 +201,5 @@ class CodeBreaker
   end
 end
 
-# Start game with number of (rows, slots)
-game = Game.new(12, 4)
-
-# Display documentation
-puts 'GAME: MASTERMIND'
-puts
-game.rules
-CodePeg.info
-KeyPeg.info
-game.info
-
-game.get_players
-game.make_pattern
-
-# Loop through Game rows making guesses
-game.rows.times do |number|
-  row = number + 1
-  last_row = game.rows
-  puts
-  print "[Row #{row}] "
-  game.make_guess
-
-  if game.valid_guess?
-    KeyPeg.feedback(game.codemaker.pattern, game.codebreaker.guess)
-    if game.codebreaker_won? || row == last_row
-      game.winner # Display game winner
-      break
-    end
-  else
-    game.invalid_guess
-    break
-  end
-end
+# Start game with number of (rows, slots per row)
+Game.new(12, 4).play
