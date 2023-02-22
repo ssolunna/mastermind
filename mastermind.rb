@@ -89,11 +89,11 @@ class Game
 
   attr_reader :rows, :slots
 
-  def initialize(rows, slots)
+  def initialize(codemaker, codebreaker, rows, slots)
     @rows = rows
     @slots = slots
-    @codemaker = nil
-    @codebreaker = nil
+    @codemaker = CodeMaker.new(codemaker)
+    @codebreaker = CodeBreaker.new(codebreaker)
     print_info
   end
 
@@ -116,14 +116,15 @@ class Game
   end
 
   def play
-    get_players
-    make_pattern
+    print 'Pattern: ' if @codemaker.player == 'HumanPlayer'
+    @codemaker.pattern = make_pattern
 
     @rows.times do |num|
       current_row = num + 1
       puts
       print "[Row #{current_row}] Guess: "
-      make_guess
+      @codebreaker.guess = make_guess
+      puts @codebreaker.guess.join(' ') if @codebreaker.player == 'ComputerPlayer'
 
       if valid_guess?
         KeyPeg.feedback(@codemaker.pattern, @codebreaker.guess)
@@ -139,17 +140,20 @@ class Game
     end
   end
 
-  def get_players
-    @codemaker = CodeMaker.new('Computer')
-    @codebreaker = CodeBreaker.new('Player')
-  end
-
   def make_pattern
-    @codemaker.pattern = @codemaker.get_codepegs(@slots, 'random')
+    if @codemaker.player == 'ComputerPlayer'
+      @codemaker.get_codepegs(@slots, 'random')
+    else
+      @codemaker.get_codepegs(@slots)
+    end
   end
 
   def make_guess
-    @codebreaker.guess = @codebreaker.get_codepegs(@slots)
+    if @codebreaker.player == 'HumanPlayer'
+      @codebreaker.get_codepegs(@slots)
+    else
+      @codebreaker.get_codepegs(@slots, 'random')
+    end
   end
 
   def valid_guess?
@@ -158,8 +162,8 @@ class Game
   end
 
   def print_invalid_guess
-    puts
     puts "Couldn't get your guess."
+    puts
     puts "You must type #{@slots} colors from the code pegs."
     puts '(lowercase and space-separated words)'
   end
@@ -170,7 +174,7 @@ class Game
 
   def winner
     if @codebreaker.winner
-      'You won! You got it right'
+      'You won! You got it right.'
     else
       "Game over. The pattern was: #{@codemaker.pattern.join(' ')}"
     end
@@ -181,9 +185,10 @@ class CodeMaker
   include CodePeg
 
   attr_accessor :pattern, :winner
+  attr_reader :player
 
-  def initialize(name)
-    @name = name
+  def initialize(player)
+    @player = player
     @pattern = []
     @winner = false
   end
@@ -193,13 +198,25 @@ class CodeBreaker
   include CodePeg
 
   attr_accessor :guess, :winner
+  attr_reader :player
 
-  def initialize(name)
-    @name = name
+  def initialize(player)
+    @player = player
     @guess = []
     @winner = false
   end
 end
 
-# Start game with number of (rows, slots per row)
-Game.new(12, 4).play
+# Allow HumanPlayer to choose between being the code maker or the code breaker
+print 'Do you want to be the code maker? [y|N]: '
+response = gets.chomp
+
+case response.downcase
+when 'y', 'yes'
+  # Start game with (codemaker, codebreaker, rows, slots per row)
+  Game.new('HumanPlayer', 'ComputerPlayer', 12, 4).play
+when 'n', 'no', ''
+  Game.new('ComputerPlayer', 'HumanPlayer', 12, 4).play
+else
+  puts 'Error: Unknown answer.'
+end
