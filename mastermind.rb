@@ -116,8 +116,11 @@ class Game
   end
 
   def play
-    print 'Pattern: ' if @codemaker.player == 'HumanPlayer'
     @codemaker.pattern = make_pattern
+    unless valid?(@codemaker.pattern)
+      print_invalid(@codemaker.pattern)
+      return
+    end
 
     @rows.times do |num|
       current_row = num + 1
@@ -126,21 +129,23 @@ class Game
       @codebreaker.guess = make_guess
       puts @codebreaker.guess.join(' ') if @codebreaker.player == 'ComputerPlayer'
 
-      if valid_guess?
+      if valid?(@codebreaker.guess)
         KeyPeg.feedback(@codemaker.pattern, @codebreaker.guess)
         if codebreaker_won? || current_row == @rows
           puts
-          puts winner
+          print_winner
           break
         end
       else
-        print_invalid_guess
+        print_invalid(@codebreaker.guess)
         break
       end
     end
   end
 
   def make_pattern
+    print 'Pattern: ' if @codemaker.player == 'HumanPlayer'
+
     if @codemaker.player == 'ComputerPlayer'
       @codemaker.get_codepegs(@slots, 'random')
     else
@@ -156,13 +161,18 @@ class Game
     end
   end
 
-  def valid_guess?
-    CodePeg.valid_color?(@codebreaker.guess) &&
-      @codebreaker.guess.length == @slots
+  def valid?(codepegs)
+    CodePeg.valid_color?(codepegs) && codepegs.length == @slots
   end
 
-  def print_invalid_guess
-    puts "Couldn't get your guess."
+  def print_invalid(codepegs)
+    case codepegs
+    when @codemaker.pattern
+      puts "Couldn't get your pattern."
+    when @codebreaker.guess
+      puts "Couldn't get your guess."
+    end
+
     puts
     puts "You must type #{@slots} colors from the code pegs."
     puts '(lowercase and space-separated words)'
@@ -172,11 +182,11 @@ class Game
     @codebreaker.winner = true if @codebreaker.guess == @codemaker.pattern
   end
 
-  def winner
+  def print_winner
     if @codebreaker.winner
-      'You won! You got it right.'
+      puts "Right guess. #{@codebreaker.player} (codebreaker) wins!"
     else
-      "Game over. The pattern was: #{@codemaker.pattern.join(' ')}"
+      puts "Game over. #{@codemaker.player} (codemaker) wins!"
     end
   end
 end
@@ -210,6 +220,7 @@ end
 # Allow HumanPlayer to choose between being the code maker or the code breaker
 print 'Do you want to be the code maker? [y|N]: '
 response = gets.chomp
+puts
 
 case response.downcase
 when 'y', 'yes'
