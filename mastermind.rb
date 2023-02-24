@@ -12,10 +12,10 @@ module CodePeg
     puts
   end
 
-  def get_codepegs(quantity, random = nil)
+  def get_codepegs(qty, random = nil)
     if random
       selected_codepegs = []
-      quantity.times { selected_codepegs << CODEPEGS.sample }
+      qty.times { selected_codepegs << CODEPEGS.sample }
       selected_codepegs
     else
       gets.chomp.split(' ')
@@ -53,30 +53,28 @@ module KeyPeg
     { colored: colored, white: white }
   end
 
-  def self.feedback(pattern, guess)
-    result = count(pattern, guess)
+  def self.print_feedback(result)
+    print_short_feedback(result)
 
-    short_feedback(result)
-
-    if result.all? { |_keypeg, quantity| quantity.zero? }
+    if result.all? { |_keypeg, qty| qty.zero? }
       puts 'No color found in pattern.'
     else
-      print 'You got: '
+      print 'Key pegs awarded: '
       i = 0
-      result.each do |keypeg, quantity|
-        next unless quantity.positive?
+      result.each do |keypeg, qty|
+        next unless qty.positive?
 
         print ', ' if i >= 1
         i += 1
-        print "#{quantity} #{keypeg} peg#{'s' if quantity > 1}"
+        print "#{qty} #{keypeg} peg#{'s' if qty > 1}"
       end
       puts '.'
     end
   end
 
-  def self.short_feedback(result)
+  def self.print_short_feedback(result)
     print '['
-    result.each { |keypeg, quantity| print quantity, keypeg[0].upcase }
+    result.each { |keypeg, qty| print qty, keypeg[0].upcase }
     print '] '
   end
 end
@@ -105,8 +103,6 @@ class Game
   end
 
   def print_info
-    puts 'GAME: MASTERMIND'
-    puts
     print_rules
     CodePeg.info
     KeyPeg.info
@@ -116,7 +112,8 @@ class Game
   end
 
   def play
-    @codemaker.pattern = make_pattern
+    @codemaker.player.make_pattern(@slots)
+
     unless valid?(@codemaker.pattern)
       print_invalid(@codemaker.pattern)
       return
@@ -126,38 +123,23 @@ class Game
       current_row = num + 1
       puts
       print "[Row #{current_row}] Guess: "
-      @codebreaker.guess = make_guess
-      puts @codebreaker.guess.join(' ') if @codebreaker.player == 'ComputerPlayer'
+      @codebreaker.player.make_guess(@slots)
 
       if valid?(@codebreaker.guess)
-        KeyPeg.feedback(@codemaker.pattern, @codebreaker.guess)
+        @codebreaker.feedback =
+          KeyPeg.count(@codemaker.pattern, @codebreaker.guess)
+        KeyPeg.print_feedback(@codebreaker.feedback)
+
         if codebreaker_won? || current_row == @rows
           puts
           print_winner
           break
         end
+
       else
         print_invalid(@codebreaker.guess)
         break
       end
-    end
-  end
-
-  def make_pattern
-    print 'Pattern: ' if @codemaker.player == 'HumanPlayer'
-
-    if @codemaker.player == 'ComputerPlayer'
-      @codemaker.get_codepegs(@slots, 'random')
-    else
-      @codemaker.get_codepegs(@slots)
-    end
-  end
-
-  def make_guess
-    if @codebreaker.player == 'HumanPlayer'
-      @codebreaker.get_codepegs(@slots)
-    else
-      @codebreaker.get_codepegs(@slots, 'random')
     end
   end
 
@@ -184,38 +166,138 @@ class Game
 
   def print_winner
     if @codebreaker.winner
-      puts "Right guess. #{@codebreaker.player} (codebreaker) wins!"
+      puts "Right guess. #{@codebreaker.player.class} (codebreaker) wins!"
     else
-      puts "Game over. #{@codemaker.player} (codemaker) wins!"
+      puts "Game over. #{@codemaker.player.class} (codemaker) wins!"
     end
   end
 end
 
 class CodeMaker
-  include CodePeg
-
   attr_accessor :pattern, :winner
   attr_reader :player
 
   def initialize(player)
-    @player = player
+    @player = player.new(self)
     @pattern = []
     @winner = false
   end
 end
 
 class CodeBreaker
-  include CodePeg
-
-  attr_accessor :guess, :winner
+  attr_accessor :guess, :feedback, :winner
   attr_reader :player
 
   def initialize(player)
-    @player = player
+    @player = player.new(self)
     @guess = []
+    @feedback = {}
     @winner = false
   end
 end
+
+class ComputerPlayer
+  include CodePeg
+
+  def initialize(role)
+    @role = role
+    @guesses = []
+    @correct_codepegs = []
+    @selected_codepegs = []
+  end
+
+  def make_pattern(qty)
+    @role.pattern = get_codepegs(qty, 'random')
+  end
+
+  def make_guess(qty)
+    current_keypegs = @role.feedback.values.sum
+
+    @role.guess =
+      if @role.guess.empty?
+        random_color_in_all_slots(qty)
+      elsif current_keypegs.zero?
+        all_slots_same_color(qty)
+      elsif current_keypegs < qty
+        keep_same_color(current_keypegs)
+      else
+        change_pegs_positions
+      end
+
+    @guesses << @role.guess
+    puts @role.guess.join(' ')
+    @role.guess
+  end
+
+  def random_color_in_all_slots(qty)
+    guess = []
+    random_color = CODEPEGS.sample
+    qty.times { guess << random_color }
+    guess
+  end
+
+  def all_slots_same_color(qty)
+    CODEPEGS.each do |codepeg|
+      guess = Array.new(qty, codepeg)
+      return guess unless @guesses.include?(guess)
+    end
+  end
+
+  def keep_same_color(qty)
+    guess = [*@correct_codepegs]
+
+    unless qty == @correct_codepegs.length
+      correct_codepeg = @role.guess.last
+
+      (qty - @correct_codepegs.length).times do
+        guess << correct_codepeg
+      end
+
+      @selected_codepegs << correct_codepeg
+      @correct_codepegs = guess.rotate(0) # Makes a copy of guess
+    end
+
+    guess.concat(non_selected_codepeg(@role.guess.length - qty))
+  end
+
+  def non_selected_codepeg(qty)
+    non_selected = []
+
+    CODEPEGS.each do |codepeg|
+      next if @selected_codepegs.include?(codepeg)
+
+      qty.times { non_selected << codepeg }
+      @selected_codepegs << codepeg
+      break
+    end
+
+    non_selected
+  end
+
+  def change_pegs_positions
+    @role.guess.shuffle
+  end
+end
+
+class HumanPlayer
+  include CodePeg
+
+  def initialize(role)
+    @role = role
+  end
+
+  def make_pattern(qty)
+    print 'Pattern: '
+    @role.pattern = get_codepegs(qty)
+  end
+
+  def make_guess(qty)
+    @role.guess = get_codepegs(qty)
+  end
+end
+
+puts 'GAME: MASTERMIND'
+puts
 
 # Allow HumanPlayer to choose between being the code maker or the code breaker
 print 'Do you want to be the code maker? [y|N]: '
@@ -225,9 +307,9 @@ puts
 case response.downcase
 when 'y', 'yes'
   # Start game with (codemaker, codebreaker, rows, slots per row)
-  Game.new('HumanPlayer', 'ComputerPlayer', 12, 4).play
+  Game.new(HumanPlayer, ComputerPlayer, 12, 4).play
 when 'n', 'no', ''
-  Game.new('ComputerPlayer', 'HumanPlayer', 12, 4).play
+  Game.new(ComputerPlayer, HumanPlayer, 12, 4).play
 else
   puts 'Error: Unknown answer.'
 end
